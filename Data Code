@@ -1,0 +1,548 @@
+from google.colab import files
+uploaded = files.upload()
+
+import pandas as pd
+data = pd.read_csv("StudentPerformanceFactors.csv")
+
+
+from google.colab import drive
+drive.mount('/content/drive')
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+print(data.head())
+
+
+
+print(data.info())
+
+print(data.describe())
+
+print(data.isnull().sum())
+
+data = data.dropna()
+
+print(data.isnull().sum())
+
+# Calculate summary statistics for numerical columns
+distribution_summary = data[['Hours_Studied', 'Sleep_Hours', 'Physical_Activity', 'Exam_Score']].describe()
+print(distribution_summary)
+
+
+
+
+sns.histplot(data['Hours_Studied'])
+plt.title('Distribution of Hours Studied per Week')
+plt.xlabel('Hours Studied')
+plt.ylabel('Frequency')
+plt.show()
+
+sns.histplot(data['Sleep_Hours'])
+plt.title('Distribution of Sleep Hours per Night')
+plt.xlabel('Sleep Hours')
+plt.ylabel('Frequency')
+plt.show()
+
+sns.histplot(data['Physical_Activity'])
+plt.title('Distribution of Physical Activity Hours per Week')
+plt.xlabel('Physical Activity Hours')
+plt.ylabel('Frequency')
+plt.show()
+
+
+
+
+sns.histplot(data['Exam_Score'])
+plt.title('Distribution of Exam Scores')
+plt.xlabel('Exam Score')
+plt.ylabel('Frequency')
+plt.show()
+
+sns.boxplot(x='Gender', y='Exam_Score', data=data)
+plt.title('Exam Score by Gender')
+plt.xlabel('Gender')
+plt.ylabel('Exam Score')
+plt.show()
+
+sns.boxplot(x='School_Type', y='Exam_Score', data=data)
+plt.title('Exam Score by School Type')
+plt.xlabel('School Type')
+plt.ylabel('Exam Score')
+plt.show()
+
+
+sns.boxplot(x='Parental_Involvement', y='Exam_Score', data=data)
+plt.title('Exam Score by Parental Involvement')
+plt.xlabel('Parental Involvement')
+plt.ylabel('Exam Score')
+plt.show()
+
+sns.boxplot(x='Access_to_Resources', y='Exam_Score', data=data)
+plt.title('Exam Score by Access to Resources')
+plt.xlabel('Access to Resources')
+plt.ylabel('Exam Score')
+plt.show()
+
+sns.scatterplot(x='Tutoring_Sessions', y='Exam_Score', data=data)
+plt.title('Exam Score vs. Tutoring Sessions')
+plt.xlabel('Tutoring Sessions per Month')
+plt.ylabel('Exam Score')
+plt.show()
+
+
+sns.boxplot(x='Family_Income', y='Exam_Score', data=data)
+plt.title('Exam Score by Family Income Level')
+plt.xlabel('Family Income')
+plt.ylabel('Exam Score')
+plt.show()
+
+sns.barplot(x='Parental_Education_Level', y='Exam_Score', data=data)
+plt.title('Average Exam Score by Parental Education Level')
+plt.xlabel('Parental Education Level')
+plt.ylabel('Average Exam Score')
+plt.show()
+
+
+correlation = data[['Hours_Studied', 'Sleep_Hours', 'Previous_Scores', 'Physical_Activity', 'Exam_Score']].corr()
+sns.heatmap(correlation, annot=True, cmap='coolwarm')
+plt.title('Correlation Matrix of Key Numerical Factors')
+plt.show()
+
+
+# Extracurricular Activities Count Plot
+sns.countplot(x='Extracurricular_Activities', data=data)
+plt.title('Participation in Extracurricular Activities')
+plt.xlabel('Extracurricular Activities')
+plt.ylabel('Count')
+plt.show()
+
+# Internet Access Count Plot
+sns.countplot(x='Internet_Access', data=data)
+plt.title('Internet Access Availability')
+plt.xlabel('Internet Access')
+plt.ylabel('Count')
+plt.show()
+
+
+sns.violinplot(x='Motivation_Level', y='Exam_Score', data=data)
+plt.title('Exam Scores by Motivation Level')
+plt.xlabel('Motivation Level')
+plt.ylabel('Exam Score')
+plt.show()
+
+
+sns.pairplot(data[['Hours_Studied', 'Sleep_Hours', 'Previous_Scores', 'Physical_Activity', 'Exam_Score']])
+plt.suptitle('Pair Plot of Key Numerical Variables', y=1.02)
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Redictor variables and target variable
+X = data[['Hours_Studied', 'Previous_Scores', 'Motivation_Level']]
+y = data['Exam_Score']
+
+# Categorical variables to dummy variables
+X = pd.get_dummies(X, drop_first=True)
+
+# Training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Train the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+print("Mean Squared Error:", mean_squared_error(y_test, y_pred))
+print("R-squared:", r2_score(y_test, y_pred))
+
+
+from sklearn.cluster import KMeans
+import matplotlib.pyplot as plt
+
+# Variables Selection for clustering
+X_clustering = data[['Hours_Studied', 'Exam_Score', 'Motivation_Level']]
+X_clustering = pd.get_dummies(X_clustering, drop_first=True)
+
+# Optimal number of clusters using the elbow method
+inertia = []
+for k in range(1, 10):
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    kmeans.fit(X_clustering)
+    inertia.append(kmeans.inertia_)
+
+# Plot the elbow curve
+plt.plot(range(1, 10), inertia, marker='o')
+plt.title('Elbow Method for Optimal k')
+plt.xlabel('Number of clusters')
+plt.ylabel('Inertia')
+plt.show()
+
+# KMeans with the optimal number of clusters
+kmeans = KMeans(n_clusters=3, random_state=42)
+data['Cluster'] = kmeans.fit_predict(X_clustering)
+
+# Visualize clusters
+sns.scatterplot(x='Hours_Studied', y='Exam_Score', hue='Cluster', data=data)
+plt.title('Clusters of Students Based on Hours Studied and Exam Score')
+plt.xlabel('Hours Studied')
+plt.ylabel('Exam Score')
+plt.show()
+
+
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+# Define the target variable as High or Low based on a threshold
+data['Score_Category'] = data['Exam_Score'].apply(lambda x: 'High' if x >= 70 else 'Low')
+
+# Define predictors and target
+X_classification = data[['Hours_Studied', 'Previous_Scores', 'Family_Income']]
+y_classification = data['Score_Category']
+
+# Convert categorical variables to dummy variables
+X_classification = pd.get_dummies(X_classification, drop_first=True)
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X_classification, y_classification, test_size=0.3, random_state=42)
+
+# Train a Decision Tree Classifier
+clf = DecisionTreeClassifier(random_state=42)
+clf.fit(X_train, y_train)
+
+# Make predictions
+y_pred = clf.predict(X_test)
+
+# Evaluate the model
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+
+from google.colab import files
+uploaded = files.upload()
+
+
+import pandas as pd
+data = pd.read_csv("StudentPerformanceFactors.csv")
+print(data.head())
+print(data.describe())
+
+print(data.isnull().sum())
+
+
+
+# Display basic information about the dataset
+data_info = {
+    "shape": data.shape,
+    "columns": data.columns.tolist(),
+    "head": data.head(),
+    "missing_values": data.isnull().sum(),
+    "data_types": data.dtypes
+}
+data_info
+
+# Handle missing values
+
+# For categorical columns, replace missing values with the mode
+categorical_columns = ['Teacher_Quality', 'Parental_Education_Level', 'Distance_from_Home']
+for col in categorical_columns:
+    data[col].fillna(data[col].mode()[0], inplace=True)
+
+# Check if there are any remaining missing values
+remaining_missing_values = data.isnull().sum()
+
+# Display the cleaned data information
+cleaning_summary = {
+    "remaining_missing_values": remaining_missing_values,
+    "sample_data_after_cleaning": data.head()
+}
+cleaning_summary
+
+# Summary statistics for numerical variables
+numerical_summary = data.describe()
+
+# Frequency counts for categorical variables
+categorical_summary = data.select_dtypes(include='object').apply(pd.Series.value_counts)
+
+# Correlation matrix for numerical variables
+# Include numeric_only=True to only calculate correlation for numerical columns
+correlation_matrix = data.corr(numeric_only=True)
+
+# Preparing results
+eda_summary = {
+    "numerical_summary": numerical_summary,
+    "categorical_summary": categorical_summary,
+    "correlation_matrix": correlation_matrix
+}
+eda_summary
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Set visualization style
+sns.set_theme(style="whitegrid")
+
+# Plot: Distribution of Exam_Score
+plt.figure(figsize=(8, 5))
+sns.histplot(data['Exam_Score'], kde=True, bins=30, color="skyblue")
+plt.title("Distribution of Exam Scores", fontsize=14)
+plt.xlabel("Exam Score")
+plt.ylabel("Frequency")
+plt.show()
+
+# Plot: Correlation Heatmap
+# Include numeric_only=True to only calculate correlation for numerical columns
+plt.figure(figsize=(10, 6))
+sns.heatmap(data.corr(numeric_only=True), annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5)
+plt.title("Correlation Heatmap", fontsize=14)
+plt.show()
+
+# Scatterplot: Exam_Score vs. Hours_Studied
+plt.figure(figsize=(8, 5))
+sns.scatterplot(x='Hours_Studied', y='Exam_Score', data=data, alpha=0.6, color="green")
+plt.title("Exam Score vs. Hours Studied", fontsize=14)
+plt.xlabel("Hours Studied")
+plt.ylabel("Exam Score")
+plt.show()
+
+# Boxplot: Exam_Score by School_Type
+plt.figure(figsize=(8, 5))
+sns.boxplot(x='School_Type', y='Exam_Score', data=data, palette="pastel")
+plt.title("Exam Score by School Type", fontsize=14)
+plt.xlabel("School Type")
+plt.ylabel("Exam Score")
+plt.show()
+
+
+
+from google.colab import files
+uploaded = files.upload()
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+data = pd.read_csv("StudentPerformanceFactors.csv")
+
+print(data.head())
+
+print(data.info())
+
+print(data.describe())
+
+print(data.isnull().sum())
+
+data = data.dropna()
+
+print(data.isnull().sum())
+
+# Remove zero or negative values
+data = data[data['Hours_Studied'] > 0]
+
+# Remove scores above 100
+data = data[data['Exam_Score'] <= 100]
+
+# Box Plot For Hours Studied and Exam Score
+plt.figure(figsize=(12, 6))
+sns.boxplot(data=data[['Hours_Studied', 'Exam_Score']])
+plt.title('Box Plots for Hours Studied and Exam Scores')
+plt.show()
+
+#Distribution of Hours Studied
+plt.figure(figsize=(8, 5))
+sns.histplot(data['Hours_Studied'], kde=True, bins=15, color='blue')
+plt.title('Distribution of Hours Studied')
+plt.xlabel('Hours Studied')
+plt.ylabel('Frequency')
+plt.show()
+
+#Distribution of Sleep Hours
+plt.figure(figsize=(8, 5))
+sns.histplot(data['Sleep_Hours'], kde=True, bins=15, color='green')
+plt.title('Distribution of Sleep Hours')
+plt.xlabel('Sleep Hours')
+plt.ylabel('Frequency')
+plt.show()
+
+#Distribution of Exam Scores
+plt.figure(figsize=(8, 5))
+sns.histplot(data['Exam_Score'], kde=True, bins=15, color='orange')
+plt.title('Distribution of Exam Scores')
+plt.xlabel('Exam Scores')
+plt.ylabel('Frequency')
+plt.show()
+
+#Hours Studied vs. Exam Scores
+plt.figure(figsize=(8, 5))
+sns.scatterplot(x='Hours_Studied', y='Exam_Score', data=data, color='blue')
+plt.title('Hours Studied vs. Exam Scores')
+plt.xlabel('Hours Studied')
+plt.ylabel('Exam Scores')
+plt.show()
+
+#Attendance vs. Exam Scores
+plt.figure(figsize=(8, 5))
+sns.scatterplot(x='Attendance', y='Exam_Score', data=data, color='purple')
+plt.title('Attendance vs. Exam Scores')
+plt.xlabel('Attendance (%)')
+plt.ylabel('Exam Scores')
+plt.show()
+
+#Sleep Hours vs. Exam Scores
+plt.figure(figsize=(8, 5))
+sns.scatterplot(x='Sleep_Hours', y='Exam_Score', data=data, color='green')
+plt.title('Sleep Hours vs. Exam Scores')
+plt.xlabel('Sleep Hours')
+plt.ylabel('Exam Scores')
+plt.show()
+
+#Parental Involvement vs. Exam Scores
+plt.figure(figsize=(8, 5))
+sns.barplot(x='Parental_Involvement', y='Exam_Score', data=data, errorbar=None, palette='muted')
+plt.title('Parental Involvement vs. Exam Scores')
+plt.xlabel('Parental Involvement')
+plt.ylabel('Exam Scores')
+plt.show()
+
+sns.regplot(x='Hours_Studied', y='Exam_Score', data=data, scatter_kws={'alpha':0.6}, line_kws={'color':'red'})
+
+#School Type vs. Exam Scores
+plt.figure(figsize=(8, 5))
+sns.barplot(x='School_Type', y='Exam_Score', data=data, errorbar=None, palette='muted')
+plt.title('School Type vs. Exam Scores')
+plt.xlabel('School Type')
+plt.ylabel('Exam Scores')
+plt.show()
+
+from sklearn.linear_model import LinearRegression
+import numpy as np
+
+# Prepare data
+X = data[['Hours_Studied', 'Motivation_Level', 'Attendance']]
+y = data['Exam_Score']
+
+# Dummy encoding for categorical variables
+X = pd.get_dummies(X, drop_first=True)
+
+# Fit regression model
+model = LinearRegression()
+model.fit(X, y)
+
+# Coefficients visualization
+coefficients = pd.Series(model.coef_, index=X.columns)
+coefficients.plot(kind='bar', figsize=(8, 5), color='teal')
+plt.title('Regression Coefficients')
+plt.xlabel('Variables')
+plt.ylabel('Coefficient Value')
+plt.show()
+
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
+
+# Prepare and scale data
+features = data[['Hours_Studied', 'Attendance', 'Motivation_Level']]
+features = pd.get_dummies(features, drop_first=True)
+scaler = StandardScaler()
+features_scaled = scaler.fit_transform(features)
+
+# K-means clustering
+kmeans = KMeans(n_clusters=3, random_state=42)
+data['Cluster'] = kmeans.fit_predict(features_scaled)
+
+# Scatter plot of clusters
+plt.figure(figsize=(8, 5))
+sns.scatterplot(x='Hours_Studied', y='Exam_Score', hue='Cluster', data=data, palette='Set1')
+plt.title('Clustering Analysis of Student Performance')
+plt.xlabel('Hours Studied')
+plt.ylabel('Exam Scores')
+plt.legend(title='Cluster')
+plt.show()
+
+plt.figure(figsize=(8, 5))
+sns.barplot(x='Parental_Involvement', y='Exam_Score', data=data, errorbar=None, palette='pastel')
+plt.title('Parental Involvement vs. Exam Scores')
+plt.xlabel('Parental Involvement')
+plt.ylabel('Exam Scores')
+plt.show()
+
+data.groupby('Motivation_Level')['Exam_Score'].describe()
+
+data.groupby('Parental_Involvement')['Exam_Score'].describe()
+
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
+
+# Select predictors and target
+predictors = ['Hours_Studied', 'Attendance', 'Motivation_Level']
+X = pd.get_dummies(data[predictors], drop_first=True)  # Encode categorical variables
+y = data['Exam_Score']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Fit the regression model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+r2 = r2_score(y_test, y_pred)
+print(f"R-squared: {r2}")
+
+# Display coefficients
+coefficients = pd.DataFrame({'Feature': X.columns, 'Coefficient': model.coef_})
+print(coefficients)
+
+from sklearn.preprocessing import StandardScaler
+
+# Selection of features for clustering
+features = ['Hours_Studied', 'Attendance', 'Motivation_Level']
+X = pd.get_dummies(data[features], drop_first=True)
+
+# Scale the data for better performance
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Fit the K-Means model
+kmeans = KMeans(n_clusters=3, random_state=42)
+data['Cluster'] = kmeans.fit_predict(X_scaled)
+
+# Visualize the clusters
+plt.figure(figsize=(8, 5))
+sns.scatterplot(x=data['Hours_Studied'], y=data['Exam_Score'], hue=data['Cluster'], palette='Set1')
+plt.title('Clustering Analysis of Student Performance')
+plt.xlabel('Hours Studied')
+plt.ylabel('Exam Scores')
+plt.legend(title='Cluster')
+plt.show()
+
+#Cluster renaming
+cluster_mapping = {
+    0: 'High Performers',
+    1: 'Moderate Performers',
+    2: 'Low Performers'
+}
+
+# Renaming
+data['Cluster'] = data['Cluster'].replace(cluster_mapping)
+
+# Verify the renaming
+print(data[['Cluster', 'Hours_Studied', 'Attendance', 'Exam_Score']].head())
+
+plt.figure(figsize=(8, 5))
+sns.scatterplot(x='Hours_Studied', y='Exam_Score', hue='Cluster', data=data, palette='Set1')
+plt.title('Clustering Analysis of Student Performance')
+plt.xlabel('Hours Studied')
+plt.ylabel('Exam Scores')
+plt.legend(title='Cluster')
+plt.show()
+
+
